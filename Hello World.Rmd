@@ -1,0 +1,10 @@
+---
+title: "Hello World"
+author: "Roger Tchegui"
+date: "7/9/2021"
+output: html_document
+---
+
+# Hello World
+
+# Sangeet is  a Genius 
