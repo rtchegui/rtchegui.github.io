@@ -8,7 +8,13 @@ output: html_document
 
 # ROGER WILLIAM TCHEGUI   
 
-![alt text or image title](C:\\Users\\tcheg\\Downloads\\IMG_9428.jpg)
+
+
+```{r pressure, echo=FALSE, fig.cap="", out.width = '30%',fig.align='left'}
+
+knitr::include_graphics("Front ID.jpg")
+```
+
 
 # I'm from West Africa  a country call CAMERRON 
 
@@ -17,3 +23,7 @@ output: html_document
 # I work at USWS as a field Engineer
 
 # I did my undergraduate at Texas tech University and now attending SMU
+
+
+
+# [The other tabs represent work / analyses that I have completed.  Please check them out!.]
