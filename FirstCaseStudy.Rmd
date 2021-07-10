@@ -1,0 +1,326 @@
+---
+title: "First Case Study"
+author: "Roger Tchegui & Shiju Raju"
+date: "6/25/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+```{r}
+library(stringr)
+library(dplyr)
+library(ggplot2)
+library(tidyr)
+library(gridExtra)
+library(knitr)
+library(class)
+library(caret)
+library(e1071)
+
+```
+
+## R Markdown
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+
+```{r}
+## Reading Beers dataset 
+beers <- read.csv('Beers.csv', header = TRUE)
+
+## Displaying top 5 rows from Beer datatset
+head(beers,5)
+```
+
+
+```{r}
+## Reading the breweries dataset
+breweries <- read.csv('Breweries.csv',header = TRUE)
+
+## Displaying top 5 rows from Breweries dataset
+head(breweries,5)
+```
+
+## 1)  How many breweries are present in each state? 
+
+```{r}
+breweries$State <- str_replace_all(breweries$State,"[' ']",'')  ## Removing quotation on the States name. 
+
+#breweries %>% group_by(State) %>% summarise(count = n()) 
+
+state_df <- data.frame('abb'=state.abb,'State_Name'=state.name)  ##  Spelling out States name not just abbreviation
+
+breweries_merge <- merge(breweries,state_df, by.x ='State', by.y = 'abb', all.x=T)
+
+breweries_merge$State_Name[which(breweries$State=='DC')] <- 'District of Columbia' ## Mapping DC state to the NA value 
+
+## Graphical representation of breweries on each states
+
+breweries_merge %>% filter(!is.na(State_Name))%>% group_by(State_Name) %>% mutate(count = n()) %>% ggplot(aes(x=State_Name, fill=State_Name),stat='count')+
+  geom_bar()+ geom_text(aes(label=after_stat(count)), stat='count',nudge_y=1.8,va='bottom')+ggtitle('Number of Breweries by state')+ xlab('State')+ylab('Number of Breweries') + theme(legend.position = "none",axis.text.y = element_text(size=8)) +  coord_flip()
+```
+
+## Conclusion: Colorado is the State with the most Breweries.
+
+
+```{r}
+```
+
+## 2)  Merge beer data with the breweries data. Print the first 6 
+    observations and the last six observations to check the merged file.  
+   (RMD only, this does not need to be included in the presentation or the deck.)
+
+
+
+```{r}
+
+
+
+# Merge beer dataset with Breweries dataset based on the unique ID
+BB_merge <- merge(x = beers,y = breweries_merge,by.y = "Brew_ID",by.x = 'Brewery_id', all.x = TRUE)
+
+# Showing first six observations
+head(BB_merge,6)
+
+# showing last six observations
+tail(BB_merge,6)
+```
+
+# Conclusion: The first 6 and last 6 observation show a heavy concentration of breweries in the state of New-York
+
+
+```{r}
+```
+
+
+## 3) Address the missing values in each column 
+
+```{r}
+missing.values <- BB_merge %>% as.data.frame %>%
+  gather(key = "key", value = "val") %>%
+  mutate(is.missing = is.na(val)) %>%
+  group_by(key, is.missing) %>%
+  summarise(num.missing = n()) %>%
+  filter(is.missing==T) %>%
+  select(-is.missing) %>%
+  arrange(desc(num.missing)) 
+
+missing.values  %>% kable()
+
+## Graphical representation of the missing values on ABV & IBU 
+
+missing.values %>% ggplot(aes(x=key, y=num.missing, fill = key,group=num.missing))+
+  geom_bar(stat='identity',position = 'dodge')+geom_text(aes(label=num.missing),position = position_dodge(width = 2))+
+  ggtitle('Missing Values on ABV & IBU')+xlab('Fields') +ylab('Missing Values') + theme(legend.position = "none") + coord_flip()
+```
+
+## Conclusion: The sorting and graphing of missing values show that we have a lots of IBU missing values
+
+
+```{r}
+
+```
+
+## 4.) Compute the median alcohol content and international bitterness unit for each state. Plot a bar chart to compare.
+
+```{r}
+## Compute and plot the median alcohol content by each state.
+
+BB_merge_final <- BB_merge %>% group_by(State) %>% mutate(median_ABV = median(ABV,na.rm = TRUE))
+
+## Plot a bar chart for median ABV.
+
+BB_merge %>%filter(!is.na(State_Name)) %>%group_by(State_Name) %>% summarise(median_ABV = median(ABV, na.rm= T)) %>% ggplot(aes(x=State_Name, y= median_ABV, fill = State_Name)) +geom_bar(stat = "Summary", position = "dodge") + geom_text(aes(label = median_ABV), nudge_y = 0.004)+ ggtitle("Alcohol  Content") + xlab('State')+ ylab('mediane') + theme(legend.position = "none", axis.text.y = element_text(size=8)) + coord_flip()  
+```
+
+
+```{r}
+##  Compute and plot the median international bitterness unit by each state.
+BB_merge_final <- BB_merge_final %>% group_by(State) %>% mutate(median_IBU = median(IBU,na.rm = TRUE))
+
+## Plot a bar chart for median IBU.
+BB_merge %>% filter(!is.na(State_Name)) %>% group_by(State_Name) %>% summarise(median_IBU = median(IBU, na.rm= T)) %>% ggplot(aes(x=State_Name, y= median_IBU, fill = State_Name)) +
+  geom_bar(stat = "Summary", position = "dodge") + geom_text(aes(label = median_IBU), nudge_y =  0.004)+ ggtitle("International Bitterness") + xlab('State')+ ylab('mediane')  + theme(legend.position = "none", axis.text.y = element_text(size=8)) + coord_flip()
+```
+
+#### Conclusion: The graphing representation of median ABV show few states with a pretty high Alcohol content (West Virginia, New-Mexico, Michigan, Kentucky and  DC), while West Virginia, and Maine have the more Bitter beer.
+
+
+```{r}
+```
+
+## 5) Which state has the maximum alcoholic (ABV) beer? Which state has the most bitter (IBU) beer?
+
+
+```{r}
+
+BB_merge$State_Name[which.max(BB_merge$ABV)]
+BB_merge$State_Name[which.max(BB_merge$IBU)]
+
+BB_merge %>% filter(!is.na(State_Name))%>%  group_by(State_Name) %>% summarise(max_ABV = max(ABV, na.rm = T)) %>% ggplot(aes(x= max_ABV , y = State_Name, fill=State_Name)) + 
+   geom_bar(position='dodge',stat = 'summary') + geom_text(aes(label = max_ABV), nudge_x =  0.01) + theme(legend.position = "none", axis.text.y = element_text(size=8))
+
+
+BB_merge %>% filter(!is.na(State_Name)) %>% group_by(State_Name) %>% summarise(max_IBU = max(IBU, na.rm = T)) %>% ggplot(aes(x= max_IBU , y = State_Name, fill=State_Name)) + 
+  geom_bar(position='dodge',stat = 'summary') + geom_text(aes(label = max_IBU), nudge_x =  0.01) + theme(legend.position = "none", axis.text.y = element_text(size=8))
+
+```
+
+
+## Conclusion: Colorado and Oregon have the maximum alcoholic content and the most bitter beer
+
+```{r}
+```
+
+## 6) Comment on the summary statistics and distribution of the ABV variable.
+
+
+```{r}
+summary(BB_merge$ABV)
+BB_merge %>% ggplot(aes(x=ABV)) + geom_histogram()
+BB_merge %>% ggplot(aes(sample = ABV)) + stat_qq()+stat_qq_line()
+```
+
+
+## Conclusion: The above statistic and distribution of the ABV variable show a normally distributed data with a linear correlation
+
+```{r}
+```
+
+## 7) Is there an apparent relationship between the bitterness of the beer and its alcoholic content? Draw a scatter plot.Make    your best judgment of a relationship and EXPLAIN your answer.
+
+
+```{r}
+BB_merge$scaledIBU <- scale(BB_merge$IBU)
+BB_merge$scaledABV <- scale(BB_merge$ABV)
+coef(lm(scaledIBU ~ scaledABV, data = BB_merge))
+
+BB_merge %>% ggplot(aes(y=scaledABV, x=scaledIBU)) + geom_point(color='blue') + geom_smooth(method = 'lm',se=TRUE, color = "Red") #+geom_abline(intercept = -2.959529, slope=49.39)
+```
+
+## Conclusion: The scatter plot draw above show an apparent relationship between bitterness of the beer and its alcoholic content. 
+
+
+```{r}
+```
+
+## 8) Budweiser would also like to investigate the difference with respect to IBU and ABV between IPAs (India Pale Ales) and other types of Ale (any beer with “Ale” in its name other than IPA).  You decide to use KNN classification to investigate this relationship.  Provide statistical evidence one way or the other. You can of course assume your audience is comfortable with percentages … KNN is very easy to understand conceptually.
+
+## In addition, while you have decided to use KNN to investigate this relationship (KNN is required) you may also feel free to supplement your response to this question with any other methods or techniques you have learned.  Creativity and alternative solutions are always encouraged. 
+
+
+
+
+```{r}
+#Filtering out IPA and Ale
+
+BB_merge_mutate <- BB_merge %>% mutate(target_var = ifelse(str_detect(Style,regex(" Ale",ignore_case = T)),"Ale", ifelse(str_detect(Style,regex(" IPA", ignore_case = T)),"IPA",'NA')))
+BB_merge_filtered <- BB_merge_mutate %>% filter(target_var != "NA")
+
+BB_merge_filtered <- BB_merge_filtered %>% filter(!is.na(ABV) & !is.na(IBU))
+
+BB_merge_filtered %>% ggplot(aes(x=IBU, y=ABV, color=target_var)) + geom_point()
+
+BB_merge_filtered %>% filter(is.na(ABV))
+BB_merge_filtered$scaleABV <- scale(BB_merge_filtered$ABV)
+BB_merge_filtered$scaleIBU <- scale(BB_merge_filtered$IBU)
+
+
+IPA <- BB_merge_final[str_detect(BB_merge_final$Style, "IPA"), ]
+Ale <- BB_merge_final[str_detect(BB_merge_final$Style, "Ale"), ]
+
+#replace entire name in style with "IPA"
+
+replace_IPA<-IPA %>% mutate(Style = paste0( ifelse(grepl("IPA", Style), "IPA", '')))
+#replace entire name in styler with "Ale"
+replace_Ale<-Ale %>% mutate(Style = paste0( ifelse(grepl("Ale", Style), "Ale", '')))
+total<-rbind(replace_IPA,replace_Ale)
+head(total)
+
+
+#geom_smooth(method = "lm")+
+total%>% ggplot(aes(x = median_IBU, y = median_ABV, color=Style)) + geom_point() +
+  ggtitle("Alcohol Content vs. Bitterness") +   
+  xlab("Bitterness(IBU)") + ylab("Alcohol by volume(ABV)")
+
+replace_IPA%>% ggplot(aes(x = median_IBU, y = median_ABV, color=Style)) + geom_point() +
+  geom_smooth(method = "lm")+ 
+  ggtitle("IPA Alcohol Content vs. Bitterness") +   
+  xlab("Bitterness(IBU)") + ylab("Alcohol by volume(ABV)")
+
+replace_Ale%>% ggplot(aes(x = median_IBU, y = median_ABV, color=Style)) + geom_point() +
+  geom_smooth(method = "lm")+ 
+  ggtitle("Ale-Alcohol Content vs. Bitterness") +   
+  xlab("Bitterness(IBU)") + ylab("Alcohol by volume(ABV)")
+
+set.seed(6)
+splitPerc = .70
+
+total=na.omit(total)#Omit rows with NAs.
+trainIndices = sample(1:dim(total)[1],round(splitPerc * dim(total)[1]))
+train = total[trainIndices,]
+test = total[-trainIndices,]
+
+## Loop for many k and one training / test partition
+accs = data.frame(accuracy = numeric(90), k = numeric(90))
+for(i in 1:90)
+{
+  classifications = knn(train[,c(4,5)],test[,c(4,5)],train$Style, prob = TRUE, k = i)
+  table(test$Style,classifications)
+  CM = confusionMatrix(table(test$Style,classifications))
+  accs$accuracy[i] = CM$overall[1]
+  accs$k[i] = i
+}
+plot(accs$k,accs$accuracy, type = "l", xlab = "k")
+#CM
+classifications = knn(train[,c(4,5)],test[,c(4,5)],train$Style, prob = TRUE, k = 35)
+table(classifications,test$Style)
+
+confusionMatrix(table(classifications,test$Style))
+```
+
+
+
+## Conclusion: The above analysis show a lot more of IBU beers of types IPA compare to type Ale 
+
+
+```{r}
+```
+
+
+## 9) Knock their socks off!  Find one other useful inference from the data that you feel Budweiser may be able to find value in.  You must convince them why it is important and back up your conviction with appropriate statistical evidence.
+
+
+```{r}
+#Which style of beer occurs most?
+
+Lager <- BB_merge_final[str_detect(BB_merge_final$Style, "Lager"), ]
+Porter <- BB_merge_final[str_detect(BB_merge_final$Style, "Porter"), ]
+Stout <- BB_merge_final[str_detect(BB_merge_final$Style, "Stout"), ]
+Bock <- BB_merge_final[str_detect(BB_merge_final$Style, "Bock"), ]
+Cider <- BB_merge_final[str_detect(BB_merge_final$Style, "Cider"), ]
+Pilsner <- BB_merge_final[str_detect(BB_merge_final$Style, "Pilsner"), ]
+
+replace_Lager<-Lager %>% mutate(Style = paste0( ifelse(grepl("Lager", Style), "Lager", '')))
+replace_Porter<-Porter %>% mutate(Style = paste0( ifelse(grepl("Porter", Style), "Porter", '')))
+replace_Stout<-Stout %>% mutate(Style = paste0( ifelse(grepl("Stout", Style), "Stout", '')))
+replace_Bock<-Bock %>% mutate(Style = paste0( ifelse(grepl("Bock", Style), "Bock", '')))
+replace_Cider<-Cider %>% mutate(Style = paste0( ifelse(grepl("Cider", Style), "Cider", '')))
+replace_Pilsner<-Pilsner %>% mutate(Style = paste0( ifelse(grepl("Pilsner", Style), "Pilsner", '')))
+
+other<-rbind(replace_IPA,replace_Ale,replace_Lager,replace_Porter,replace_Stout,replace_Bock,replace_Cider,replace_Pilsner)
+
+other %>% ggplot(aes(x=Style, fill=Style),stat='count')+
+    geom_bar()+
+    ggtitle('Different Style of Beer')+ 
+    xlab('Beer Style')+ylab('Count')
+```
+
+## Conclusion: The above finding show that whith a big concentration of ALE type of beers  follow by the IPA type of beers
+
+

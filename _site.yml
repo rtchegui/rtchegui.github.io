@@ -6,3 +6,5 @@ navbar:
        href: aboutme.html
      - text: "other"
        href: index.html
+     - text:"case study 1"
+       href: FirstCaseStudy.html
