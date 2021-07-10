@@ -1,0 +1,8 @@
+name : "MyPage"
+navbar :
+  title :"MyPage"
+  left:
+  - text :"aboutme"
+    href :aboutme.html
+  -text :"other"
+    href:other.html
