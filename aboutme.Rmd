@@ -16,7 +16,7 @@ knitr::opts_chunk$set(echo = TRUE)
 
 ```{r pressure, echo=FALSE, fig.cap="", out.width = '30%',fig.align='left'}
 
-knitr::include_graphics("Front ID.jpg")
+knitr::include_graphics("2018_Ford_F-150_XLT_Crew_Cab,_front_11.10.19.jpg")
 ```
 
 
