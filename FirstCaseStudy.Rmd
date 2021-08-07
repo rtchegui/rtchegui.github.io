@@ -101,22 +101,22 @@ tail(BB_merge,6)
 ## 3) Address the missing values in each column 
 
 ```{r}
-missing.values <- BB_merge %>% as.data.frame %>%
-  gather(key = "key", value = "val") %>%
-  mutate(is.missing = is.na(val)) %>%
-  group_by(key, is.missing) %>%
-  summarise(num.missing = n()) %>%
-  filter(is.missing==T) %>%
-  select(-is.missing) %>%
-  arrange(desc(num.missing)) 
-
-missing.values  %>% kable()
-
-## Graphical representation of the missing values on ABV & IBU 
-
-missing.values %>% ggplot(aes(x=key, y=num.missing, fill = key,group=num.missing))+
-  geom_bar(stat='identity',position = 'dodge')+geom_text(aes(label=num.missing),position = position_dodge(width = 2))+
-  ggtitle('Missing Values on ABV & IBU')+xlab('Fields') +ylab('Missing Values') + theme(legend.position = "none") + coord_flip()
+# missing.values <- BB_merge %>% as.data.frame %>%
+#   gather(key = "key", value = "val") %>%
+#   mutate(is.missing = is.na(val)) %>%
+#   group_by(key, is.missing) %>%
+#   summarise(num.missing = n()) %>%
+#   filter(is.missing==T) %>%
+#   dplyr::select(-is.missing) %>%
+#   arrange(desc(num.missing)) 
+# 
+# missing.values  %>% kable()
+# 
+# ## Graphical representation of the missing values on ABV & IBU 
+# 
+# missing.values %>% ggplot(aes(x=key, y=num.missing, fill = key,group=num.missing))+
+#   geom_bar(stat='identity',position = 'dodge')+geom_text(aes(label=num.missing),position = position_dodge(width = 2))+
+#   ggtitle('Missing Values on ABV & IBU')+xlab('Fields') +ylab('Missing Values') + theme(legend.position = "none") + coord_flip()
 ```
 
 ## Conclusion: The sorting and graphing of missing values show that we have a lots of IBU missing values
