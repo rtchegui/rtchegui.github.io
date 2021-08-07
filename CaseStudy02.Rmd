@@ -1,0 +1,321 @@
+---
+title: "CaseStudy02.Rmd"
+author: "Roger Tchegui"
+date: "8/2/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+## First Question of interest: Answers to Case Study 2 Tasks
+
+###Introduction to this project: DDSAnalytics is an analytics company that specializes in talent management solutions for Fortune 1000 companies. Talent management is defined as the iterative process of developing and retaining employees. It may include workforce planning, employee training programs, identifying high-potential employees and reducing/preventing voluntary employee turnover (attrition). To gain a competitive edge over its competition, DDSAnalytics is planning to leverage data science for talent management. The executive leadership has identified predicting employee turnover as its first application of data science for talent management. Before the business green lights the project, they have tasked your data science team to conduct an analysis of existing employee data.
+
+### Our team has been given a dataset (CaseStudy2-Data.csv) to conduct exploratory data analysis (EDA) to determine factors that lead to attrition. Our goal is to identify (at least) the top three factors that contribute to turnover. Additionally, the business is also interested in learning about any job role specific trends that may exist in the data set.
+
+```
+
+
+```{r}
+
+## Loading the caseStudy02 data set into r. 
+CS  <- read.csv('C:\\Users\\tcheg\\OneDrive\\Documents\\Doing Data Science 6306\\CaseStudy2-data.csv',header = TRUE)
+head(CS)
+```
+
+
+```{r}
+## Loading the various packages that will be use to conduct this study 
+library(ggplot2)
+library(dplyr)
+library(tidyverse)
+library(MASS)
+library(caret)
+library(car)
+library("randomForest")
+library(randomForest)
+##install.packages("cowplot")
+library(cowplot)
+##install.packages("leaps")
+library(leaps)
+library(e1071)
+library(ROSE)
+library(fastDummies)
+library(caret)
+library(class)
+```
+
+
+```{r}
+## We will first convert some of our columns into percentage
+
+CS %>% group_by(Attrition)%>%count(Department)%>% mutate(perc = n/nrow(CS)) -> CS_perc
+
+## Let's plot department column versus Attrition. 
+
+CS_perc%>% ggplot(aes(x=Department, y=perc))+ geom_bar(stat="identity") + facet_grid(~Attrition)
+```
+
+  ## Conclusion: It appears  that Research & Development and Sales have the highest rate of Attrition 
+
+
+```{r}
+## Let's now Convert the Gender column into percent to see at which rate male and female leave the organization. 
+
+CS %>% group_by(Attrition)%>%count(Gender)%>%mutate(perc =n/nrow(CS)) -> CS_G
+CS_G%>% ggplot(aes(x = Gender, y = perc)) + geom_bar(stat = "identity") + facet_grid(~Attrition)
+ggplot(data = CS, aes(x = MonthlyIncome , y = Gender)) +  geom_boxplot() + coord_flip()
+CS %>%group_by(JobSatisfaction) %>% count(JobRole) %>% mutate(perc = n/nrow(CS)) ->CS_job
+CS_job %>% ggplot(aes(x =JobRole, y=perc)) + geom_bar(stat = 'identity') + facet_wrap(~JobSatisfaction)
+```
+
+
+```{r}
+
+CS %>% ggplot((aes(x= BusinessTravel)))+geom_bar() +  facet_grid(~Attrition)
+ggplot(data = CS, aes( x= MonthlyIncome, y=BusinessTravel)) + geom_boxplot() + coord_flip()
+
+```
+
+## Conclusion: The analysis of the barplot Show that male leave the organization more than female. 
+
+```{r}
+
+CS %>% ggplot((aes(x= MaritalStatus)))+geom_bar() +  facet_grid(~Attrition)
+ggplot(data = CS, aes( x= MonthlyIncome, y=MaritalStatus)) + geom_boxplot() + coord_flip()
+
+```
+
+
+```{r}
+CS %>% ggplot(aes(x=MonthlyIncome, y=Attrition)) + geom_boxplot()+ coord_flip()
+```
+
+
+```{r}
+
+## Let's now look at the MonthlyIncome Versus Attrition. 
+
+CS %>% group_by(Attrition) %>% count(MonthlyIncome)%>% mutate(perc  = n/nrow(CS)) -> CS_M
+CS %>% ggplot(aes(x = MonthlyIncome, y = Attrition))  + geom_boxplot() + coord_flip() 
+
+```
+
+
+
+```{r}
+
+CS %>% ggplot(aes(x=MonthlyIncome, y=Attrition)) + geom_boxplot()+ coord_flip()
+CS %>% ggplot(aes(x=MonthlyRate, y= Attrition)) + geom_boxplot()+ facet_wrap(~Gender) + coord_flip()
+CS %>% ggplot(aes(x=Attrition, y=Age))  + geom_boxplot()+ facet_wrap(~Gender)
+CS %>% ggplot(aes(x=MaritalStatus))  + geom_bar()+ facet_wrap(~Attrition)
+CS %>% ggplot(aes(x=ID, y=Attrition)) + geom_boxplot()+ coord_flip()
+CS %>% ggplot(aes(x=Age, y=Attrition)) + geom_boxplot()+ coord_flip()
+
+```
+
+
+```{r}
+
+hist(CS$MonthlyIncome, main = "Monthly Income")
+
+```
+
+```{r}
+
+hist(CS$MonthlyRate, main = "Monthly Rate")
+
+```
+
+```{r}
+boxplot(CS$DailyRate ~ CS$Attrition, 
+        ylab = "Dollars",
+        main = "Hourly Rate by Attrition")
+
+```
+
+
+## Conclusion: The analysis of the boxplot show that people making less moeny than the median Income leave the organization the most
+
+
+```{r}
+## We will now look at the Age Versus Attrition 
+
+CS %>% ggplot(aes(x= Age, y = Attrition)) + geom_boxplot() + coord_flip()
+
+```
+
+## The analysis of the boxplot show that younger workers leave the organization more than older workers
+
+```{r}
+## Which role has more chance to leave the organization ( Research Scientist and Laboratory technician has more attrition rate)
+
+CS %>% filter(Department == "Research & Development") %>% group_by(Attrition) %>% count(JobRole) %>% mutate(perc = n/nrow(CS))-> CS2_perc
+CS2_perc %>% ggplot(aes(x=JobRole, y=perc)) + geom_bar(stat='identity') +  facet_grid(~Attrition)+coord_flip()
+
+```
+
+
+## Conclusion: Research Scientist and Laboratory technician leave the organization the most. 
+
+
+```{r}
+## Answer to our fist question of interest : Base on the above analysis it appears that top 3 factors leading to Attrition are: 
+
+##- MonthlyIncome
+##- Joblevel 
+##- Age 
+```
+
+```{r}
+## We will next do a further analysis of our data and build a model for identifying attrition, provide a model that will attain at least 60% sensitivity and specificity (60 each = 120 total) for the training and the validation set
+
+## Let's first check if our data are balance, in other for us to have a non-bias model our data need to be balance 
+# table(data$Attrition)
+
+```
+
+## Conclusion: The analysis of the Attrition column show  that we have more "No" than "Yes" meaning our data  are not balance. 
+
+
+```{r}
+## Let's now balance our data 
+
+data <- CS
+data_balanced_over <- ovun.sample(Attrition ~ ., data = data, method = "over",p=0.5,seed=1)$data
+table(data_balanced_over$Attrition)
+
+## We will then scale our data and convert it into numerical variables before building our model. 
+
+data_balanced_over_scaled <- data_balanced_over
+data_balanced_over_scaled[,c("Age","DailyRate","DistanceFromHome","Education","EnvironmentSatisfaction","HourlyRate","JobInvolvement","JobLevel","JobSatisfaction","MonthlyIncome","MonthlyRate","NumCompaniesWorked","PercentSalaryHike","PerformanceRating","RelationshipSatisfaction","StockOptionLevel","TotalWorkingYears","TrainingTimesLastYear","WorkLifeBalance","YearsAtCompany","YearsInCurrentRole","YearsSinceLastPromotion","YearsWithCurrManager")] <- scale(data_balanced_over_scaled[,c("Age","DailyRate","DistanceFromHome","Education","EnvironmentSatisfaction","HourlyRate","JobInvolvement","JobLevel","JobSatisfaction","MonthlyIncome","MonthlyRate","NumCompaniesWorked","PercentSalaryHike","PerformanceRating",
+            "RelationshipSatisfaction","StockOptionLevel","TotalWorkingYears","TrainingTimesLastYear","WorkLifeBalance","YearsAtCompany","YearsInCurrentRole","YearsSinceLastPromotion","YearsWithCurrManager")])
+
+
+data_balanced_over_scaled$Attrition <- as.factor(data_balanced_over_scaled$Attrition)
+data_balanced_over_scaled$Gender <- as.factor(data_balanced_over_scaled$Gender)
+data_balanced_over_scaled$BusinessTravel <- as.factor(data_balanced_over_scaled$BusinessTravel)
+data_balanced_over_scaled$Over18 <- as.factor(data_balanced_over_scaled$Over18)
+data_balanced_over_scaled$OverTime <- as.factor(data_balanced_over_scaled$OverTime)
+data_balanced_over_scaled$MaritalStatus <- as.factor(data_balanced_over_scaled$MaritalStatus)
+data_balanced_over_scaled$Department <- as.factor(data_balanced_over_scaled$Department)
+data_balanced_over_scaled$EducationField <- as.factor(data_balanced_over_scaled$EducationField)
+data_balanced_over_scaled$JobRole <- as.factor(data_balanced_over_scaled$JobRole)
+
+
+data_balanced_over_scaled$Attrition <- ifelse(data_balanced_over_scaled$Attrition =="No",0,1)
+data_balanced_over_scaled$Gender <- ifelse(data_balanced_over_scaled$Gender== "Male",1,0)
+data_balanced_over_scaled$Over18 <- ifelse(data_balanced_over_scaled$Over18=="No",0,1)
+data_balanced_over_scaled$OverTime <- ifelse(data_balanced_over_scaled$OverTime=="No",0,1)
+
+data_balanced_over_scaled <- dummy_cols(data_balanced_over_scaled, select_columns = c("BusinessTravel","Department","EducationField","JobRole","MaritalStatus"), remove_first_dummy = TRUE)
+
+str(data_balanced_over_scaled)
+data_balanced_over_scaled <- data_balanced_over_scaled %>% dplyr::select(-one_of(c("BusinessTravel","Department","EducationField","JobRole","MaritalStatus","ID","StandardHours","EmployeeCount","EmployeeNumber")))
+
+
+## We now ready to build our model to predict attrition: We will be using KNN model
+
+Target <- data_balanced_over_scaled %>% dplyr::select(one_of("Attrition"))
+Predictors <- data_balanced_over_scaled %>% dplyr::select(-one_of("Attrition"))
+split_perc = .7
+split_index <- sample(dim(Predictors)[1], round(dim(Predictors)[1]*split_perc))
+Predictors_Train <- Predictors[split_index,]
+Predictors_Test <- Predictors[-split_index,]
+Target_Train <- Target[split_index,]
+Target_Test <- Target[-split_index,]
+classifications <- knn(Predictors_Train,Predictors_Test , as.factor(Target_Train),k=5,prob=T)
+table(classifications, as.factor(Target_Test))
+cm <- confusionMatrix(classifications,as.factor(Target_Test))
+print(cm)
+
+```
+
+## Conclusion : With the above model we were able to get the acuracy of 0.7283, the sensitivity of 0.6376 and tyhe specificity of 0.8333
+
+
+```{r}
+## Let's now used a different model to predict Attrition: naivesbayes model. 
+
+set.seed(5)
+model <- naiveBayes(Predictors_Train, as.factor(Target_Train))
+classification <- predict(model,Predictors_Test) 
+confusionMatrix(table(classification,as.factor(Target_Test)))
+
+```
+
+## Conclusion: The naivesbayes model give us well above 60/60 sensitivity and specificity
+
+
+```{r}
+## Let's build our linear regression model to predict our RMSE
+
+## We will have to reconvert our data again and store it into a new data frame 
+
+data_balanced_ove_scaled2 <- data_balanced_over
+data_balanced_ove_scaled2$Attrition <- as.factor(data_balanced_ove_scaled2$Attrition)
+data_balanced_ove_scaled2$Gender <- as.factor(data_balanced_ove_scaled2$Gender)
+data_balanced_ove_scaled2$BusinessTravel <- as.factor(data_balanced_ove_scaled2$BusinessTravel)
+data_balanced_ove_scaled2$Over18 <- as.factor(data_balanced_ove_scaled2$Over18)
+data_balanced_ove_scaled2$OverTime <- as.factor(data_balanced_ove_scaled2$OverTime)
+data_balanced_ove_scaled2$MaritalStatus <- as.factor(data_balanced_ove_scaled2$MaritalStatus)
+data_balanced_ove_scaled2$Department <- as.factor(data_balanced_ove_scaled2$Department)
+data_balanced_ove_scaled2$EducationField <- as.factor(data_balanced_ove_scaled2$EducationField)
+data_balanced_ove_scaled2$JobRole <- as.factor(data_balanced_ove_scaled2$JobRole)
+
+
+data_balanced_ove_scaled2$Attrition <- ifelse(data_balanced_ove_scaled2$Attrition =="No",0,1)
+data_balanced_ove_scaled2$Gender <- ifelse(data_balanced_ove_scaled2$Gender== "Male",1,0)
+data_balanced_ove_scaled2$Over18 <- ifelse(data_balanced_ove_scaled2$Over18=="No",0,1)
+data_balanced_ove_scaled2$OverTime <- ifelse(data_balanced_ove_scaled2$OverTime=="No",0,1)
+
+
+data_balanced_ove_scaled2 <- dummy_cols(data_balanced_ove_scaled2, select_columns = c("BusinessTravel","Department","EducationField","JobRole","MaritalStatus"), remove_first_dummy = TRUE)
+
+
+
+
+data_balanced_ove_scaled2[,c("Age","DailyRate","DistanceFromHome","Education","EnvironmentSatisfaction","HourlyRate","JobInvolvement","JobLevel",
+                      "JobSatisfaction","MonthlyRate","NumCompaniesWorked","PercentSalaryHike","PerformanceRating",
+                      "RelationshipSatisfaction","StockOptionLevel","TotalWorkingYears","TrainingTimesLastYear","WorkLifeBalance",
+                      "YearsAtCompany","YearsInCurrentRole","YearsSinceLastPromotion","YearsWithCurrManager")] <- scale(data_balanced_ove_scaled2[,c("Age","DailyRate",
+                                                                                                                                              "DistanceFromHome","Education",
+                                                                                                                                              "EnvironmentSatisfaction","HourlyRate","JobInvolvement",
+                                                                                                                                              "JobLevel","JobSatisfaction","MonthlyRate",
+                                                                                                                                              "NumCompaniesWorked","PercentSalaryHike","PerformanceRating",
+                                                                                                                                               "RelationshipSatisfaction","StockOptionLevel","TotalWorkingYears",
+                                                                                                                                              "TrainingTimesLastYear","WorkLifeBalance","YearsAtCompany",
+                                                                                                                                              "YearsInCurrentRole","YearsSinceLastPromotion","YearsWithCurrManager")])
+data_balanced_ove_scaled2 <- data_balanced_ove_scaled2 %>% dplyr::select(-one_of( c("BusinessTravel","Department","EducationField","JobRole","MaritalStatus","EmployeeCount","Over18","StandardHours")))
+
+
+## We now ready to build our linear regression model and predict our RMSE
+
+split_perc = 0.7
+split_index <- sample(dim(data_balanced_ove_scaled2)[1], round(dim(data_balanced_ove_scaled2)[1]*split_perc))
+MonthlyIncome_LM_train <- data_balanced_ove_scaled2[split_index,]
+MonthlyIncome_LM_Test <- data_balanced_ove_scaled2[-split_index,]
+linear_model <- lm(MonthlyIncome~., data = MonthlyIncome_LM_train)
+summary(linear_model)
+Target1 <- MonthlyIncome_LM_Test%>% dplyr::select(one_of("MonthlyIncome"))
+Predictors1 <- MonthlyIncome_LM_Test %>% dplyr:: select(-one_of("MonthlyIncome"))
+predictions <- linear_model %>% predict(MonthlyIncome_LM_Test)
+
+## Let's find our RMSE
+
+
+RMSE(predictions, MonthlyIncome_LM_Test$MonthlyIncome)
+
+```
+
+
+## Conclusion: With the above linear regression model we were able to predict a RMSE of  1039.964 well below the require RMSE of < 3000 required by the customer. 
+
+
+```
+
+
+
